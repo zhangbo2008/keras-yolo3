@@ -19,6 +19,8 @@ def compose(*funcs):
 
 def letterbox_image(image, size):
     '''resize image with unchanged aspect ratio using padding'''
+
+    #保证原图片的横纵比例,如果比例有变化就用空白0填充得到的numpy矩阵.
     iw, ih = image.size
     w, h = size
     scale = min(w/iw, h/ih)
@@ -94,7 +96,7 @@ def get_random_data(annotation_line, input_shape, random=True, max_boxes=20, jit
     val = rand(1, val) if rand()<.5 else 1/rand(1, val)
     x = rgb_to_hsv(np.array(image)/255.)
     x[..., 0] += hue
-    x[..., 0][x[..., 0]>1] -= 1
+    x[..., 0][x[..., 0]>1] -= 1  #把结果限制在0,1之间.
     x[..., 0][x[..., 0]<0] += 1
     x[..., 1] *= sat
     x[..., 2] *= val
@@ -114,7 +116,12 @@ def get_random_data(annotation_line, input_shape, random=True, max_boxes=20, jit
         box[:, 3][box[:, 3]>h] = h
         box_w = box[:, 2] - box[:, 0]
         box_h = box[:, 3] - box[:, 1]
+        #进行逻辑判断,返回True false
         box = box[np.logical_and(box_w>1, box_h>1)] # discard invalid box
+        #表示 np.logical_and(box_w>1, box_h>1) 表示如果box上下界大于1像素才叫一个合法的box
+        #用坐标取,之后box就只取那些合法的.
+
+        #
         if len(box)>max_boxes: box = box[:max_boxes]
         box_data[:len(box)] = box
 

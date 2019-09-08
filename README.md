@@ -6,6 +6,24 @@
 跟yolo2差别不大,所以直接看yolo3了.
 
 
+https://pjreddie.com/darknet/yolo/
+
+这个网站东西很全,还有数据集和模型参数.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
