@@ -12,12 +12,12 @@ https://pjreddie.com/darknet/yolo/
 
 
 
+读这个
 
 
+https://blog.csdn.net/lwplwf/article/details/82895409
 
-
-
-
+pycharm版本2019.1
 
 
 
