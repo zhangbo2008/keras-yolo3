@@ -34,12 +34,12 @@ def DarknetConv2D_BN_Leaky(*args, **kwargs):
 
 def resblock_body(x, num_filters, num_blocks):
     '''A series of resblocks starting with a downsampling Convolution2D'''
-    # Darknet uses left and top padding instead of 'same' mode
+    # Darknet uses left and top padding instead of 'same' mode.....??
     x = ZeroPadding2D(((1,0),(1,0)))(x)
     x = DarknetConv2D_BN_Leaky(num_filters, (3,3), strides=(2,2))(x)
     for i in range(num_blocks):
         y = compose(
-                DarknetConv2D_BN_Leaky(num_filters//2, (1,1)),
+                DarknetConv2D_BN_Leaky(num_filters//2, (1,1)),#按照顺序就是kernal ,filters
                 DarknetConv2D_BN_Leaky(num_filters, (3,3)))(x)
         x = Add()([x,y])
     return x
