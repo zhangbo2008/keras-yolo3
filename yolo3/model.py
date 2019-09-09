@@ -123,9 +123,10 @@ def tiny_yolo_body(inputs, num_anchors, num_classes):
 def yolo_head(feats, anchors, num_classes, input_shape, calc_loss=False):
     """Convert final layer features to bounding box parameters."""
     num_anchors = len(anchors)
+
+    #因为 anchors是高维向量,所以len 不是里面数字的数量.所以下面的reshape是正确的.
     # Reshape to batch, height, width, num_anchors, box_params.
     anchors_tensor = K.reshape(K.constant(anchors), [1, 1, 1, num_anchors, 2])
-
     grid_shape = K.shape(feats)[1:3] # height, width
     grid_y = K.tile(K.reshape(K.arange(0, stop=grid_shape[0]), [-1, 1, 1, 1]),
         [1, grid_shape[1], 1, 1])
@@ -149,20 +150,32 @@ def yolo_head(feats, anchors, num_classes, input_shape, calc_loss=False):
 
 
 def yolo_correct_boxes(box_xy, box_wh, input_shape, image_shape):
+    '''
+    通过上面得到的系数,计算真实框的位置.
+
+    :param box_xy:
+    :param box_wh:
+    :param input_shape:
+    :param image_shape:
+    :return:
+    '''
     '''Get corrected boxes'''
-    box_yx = box_xy[..., ::-1]
-    box_hw = box_wh[..., ::-1]
+    box_yx = box_xy[..., ::-1]       # 中心坐标 ,下面一行是长宽.
+    box_hw = box_wh[..., ::-1]#先逆序
     input_shape = K.cast(input_shape, K.dtype(box_yx))
     image_shape = K.cast(image_shape, K.dtype(box_yx))
     new_shape = K.round(image_shape * K.min(input_shape/image_shape))
     offset = (input_shape-new_shape)/2./input_shape
-    scale = input_shape/new_shape
-    box_yx = (box_yx - offset) * scale
+    scale = input_shape/new_shape          #new_shape 是输出的图片大小,也就是label数据集里面图片大小.
+    box_yx = (box_yx - offset) * scale  #image_shape 是在new_shape外面多一层0
+    #box_yx表示0-1之间,的图片中心坐标.在图片整体的百分比坐标.
+
+    #得到的box_yx 是在new_shape 图片大小意义下,中心点百分比坐标.
     box_hw *= scale
 
     box_mins = box_yx - (box_hw / 2.)
     box_maxes = box_yx + (box_hw / 2.)
-    boxes =  K.concatenate([
+    boxes =  K.concatenate([  #默认拼接最后一列.
         box_mins[..., 0:1],  # y_min
         box_mins[..., 1:2],  # x_min
         box_maxes[..., 0:1],  # y_max
@@ -172,7 +185,8 @@ def yolo_correct_boxes(box_xy, box_wh, input_shape, image_shape):
     # Scale boxes back to original image shape.
     boxes *= K.concatenate([image_shape, image_shape])
     return boxes
-
+# a=np.array([1,2])*np.array([1,2])
+# print(a)
 
 def yolo_boxes_and_scores(feats, anchors, num_classes, input_shape, image_shape):
     '''Process Conv layer output'''
