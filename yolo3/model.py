@@ -193,11 +193,14 @@ def yolo_boxes_and_scores(feats, anchors, num_classes, input_shape, image_shape)
     box_xy, box_wh, box_confidence, box_class_probs = yolo_head(feats,
         anchors, num_classes, input_shape)
     boxes = yolo_correct_boxes(box_xy, box_wh, input_shape, image_shape)
-    boxes = K.reshape(boxes, [-1, 4])
+    boxes = K.reshape(boxes, [-1, 4]) #box拍平.
     box_scores = box_confidence * box_class_probs
     box_scores = K.reshape(box_scores, [-1, num_classes])
     return boxes, box_scores
 
+'''
+这个文件里面好多loss函数,看算法的核心就是看loss函数!!!!
+'''
 
 def yolo_eval(yolo_outputs,
               anchors,
@@ -212,11 +215,12 @@ def yolo_eval(yolo_outputs,
     input_shape = K.shape(yolo_outputs[0])[1:3] * 32
     boxes = []
     box_scores = []
-    for l in range(num_layers):
+    for l in range(num_layers):#读取部分layer层的结果.
         _boxes, _box_scores = yolo_boxes_and_scores(yolo_outputs[l],
             anchors[anchor_mask[l]], num_classes, input_shape, image_shape)
         boxes.append(_boxes)
         box_scores.append(_box_scores)
+        #收集结果.
     boxes = K.concatenate(boxes, axis=0)
     box_scores = K.concatenate(box_scores, axis=0)
 
@@ -241,9 +245,9 @@ def yolo_eval(yolo_outputs,
     scores_ = K.concatenate(scores_, axis=0)
     classes_ = K.concatenate(classes_, axis=0)
 
-    return boxes_, scores_, classes_
+    return boxes_, scores_, classes_  #就是一个收集函数.
 
-
+# print(np.array([228,228])//{0:32, 1:16, 2:8}[1])
 def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
     '''Preprocess true boxes to training input format
 
@@ -272,7 +276,7 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
     true_boxes[..., 2:4] = boxes_wh/input_shape[::-1]
 
     m = true_boxes.shape[0]
-    grid_shapes = [input_shape//{0:32, 1:16, 2:8}[l] for l in range(num_layers)]
+    grid_shapes = [input_shape//{0:32, 1:16, 2:8}[l] for l in range(num_layers)] #缩小.
     y_true = [np.zeros((m,grid_shapes[l][0],grid_shapes[l][1],len(anchor_mask[l]),5+num_classes),
         dtype='float32') for l in range(num_layers)]
 
@@ -356,7 +360,7 @@ def box_iou(b1, b2):
 
     return iou
 
-
+#loss 函数的最后表达!!!!!!!!!!!!!!!
 def yolo_loss(args, anchors, num_classes, ignore_thresh=.5, print_loss=False):
     '''Return yolo_loss tensor
 

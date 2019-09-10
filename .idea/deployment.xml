@@ -5,7 +5,7 @@
       <paths name="Copy of project-level server '12'">
         <serverdata>
           <mappings>
-            <mapping deploy="/data" local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/data/test20" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
