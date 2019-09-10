@@ -1,6 +1,21 @@
 import xml.etree.ElementTree as ET
 from os import getcwd
+'''
+这个算法,需要把Voc的数据进行标注,就是这个脚本.
+跑完之后的东西才能进行train.py 的运行
 
+
+
+下面记录这个标注脚本的使用情况:
+
+
+
+
+
+
+
+
+'''
 sets=[('2007', 'train'), ('2007', 'val'), ('2007', 'test')]
 
 classes = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
