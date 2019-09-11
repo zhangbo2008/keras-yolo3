@@ -10,4 +10,8 @@ print(open("1.txt").readline())
 print(open("1.txt").readline())
 print(open("1.txt").readline())
 
+tmp=np.array([[1,2],2,3,4])[0, np.array([True,False])]
+print(tmp)
+
+
 

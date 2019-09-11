@@ -274,7 +274,7 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
 
     Parameters
     ----------
-    true_boxes: array, shape=(m, T, 5)
+    true_boxes: array, shape=(batch_size, max_boxes_index(defuat :20), 5)
         Absolute x_min, y_min, x_max, y_max, class_id relative to input_shape.
     input_shape: array-like, hw, multiples of 32
     anchors: array, shape=(N, 2), wh
@@ -301,7 +301,7 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
     grid_shapes = [input_shape//{0:32, 1:16, 2:8}[l] for l in range(num_layers)] #缩小.
     y_true = [np.zeros((m,grid_shapes[l][0],grid_shapes[l][1],len(anchor_mask[l]),5+num_classes),
         dtype='float32') for l in range(num_layers)]#因为fpn所以grid_shapes现在是3种box,检测大中小,以前只有大,现在分辨率高了.对于检测小的物品效果更好了.  对于grid_shape=[ (10, 13, 13, 3, 25), (10, 26, 26, 3, 25), (10, 52, 52, 3, 25)]
-#grid ,shape表示方框的大小,还是跟以前一样,debug时候写注释不要破坏行号.找空白地方写.
+#grid ,shape表示方框的大小,还是跟以前一样,debug时候写注释不要破坏行号.找空白地方写.  (3,  32,13,13,3 ,25)          3: ftn  32: batchsize 13,13 w h  3:anchor mask 25:class+5
     # Expand dim to apply broadcasting.
     anchors = np.expand_dims(anchors, 0)   #anchors (1,9,2)
     anchor_maxes = anchors / 2.
@@ -310,13 +310,13 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
 
     for b in range(m):
         # Discard zero rows.
-        wh = boxes_wh[b, valid_mask[b]]
+        wh = boxes_wh[b, valid_mask[b]] #wh 表示当前batch 对应的那些合法箱子. 比如(4,2)
         if len(wh)==0: continue
         # Expand dim to apply broadcasting.
-        wh = np.expand_dims(wh, -2)
+        wh = np.expand_dims(wh, -2)         #(4,1,2)
         box_maxes = wh / 2.
         box_mins = -box_maxes
-
+        #wh 是真实box的长款. #注意np里面不同维度的向量可以计算max,min.这里面的结果是 拿标准box 跟9个anchor比较.算iou
         intersect_mins = np.maximum(box_mins, anchor_mins)
         intersect_maxes = np.minimum(box_maxes, anchor_maxes)
         intersect_wh = np.maximum(intersect_maxes - intersect_mins, 0.)
@@ -326,11 +326,11 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
         iou = intersect_area / (box_area + anchor_area - intersect_area)
 
         # Find best anchor for each true box
-        best_anchor = np.argmax(iou, axis=-1)
+        best_anchor = np.argmax(iou, axis=-1)          #iou:(4,9)  #best_anchor(7,7,8,8)表示 目标箱子0号与7号anchor最匹配, 1号箱子跟7号anchor 2号跟8号 3号跟8号
 
-        for t, n in enumerate(best_anchor):
+        for t, n in enumerate(best_anchor):#t 是box标号  n:anchor标号
             for l in range(num_layers):
-                if n in anchor_mask[l]:
+                if n in anchor_mask[l]:#这里面anchor mask 是0到8.为了如果网络是tiny时候过滤掉一些anchor
                     i = np.floor(true_boxes[b,t,0]*grid_shapes[l][1]).astype('int32')
                     j = np.floor(true_boxes[b,t,1]*grid_shapes[l][0]).astype('int32')
                     k = anchor_mask[l].index(n)
@@ -339,7 +339,7 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
                     y_true[l][b, j, i, k, 4] = 1
                     y_true[l][b, j, i, k, 5+c] = 1  #是第几类物体赋值给1.
 
-    return y_true
+    return y_true# 说明y_true里面的意义,
 
 
 
