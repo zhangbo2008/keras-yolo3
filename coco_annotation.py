@@ -1,5 +1,9 @@
 import json
 from collections import defaultdict
+id=12
+id2=99
+#python 格式化输出 模板:   '%d%d'%(a,b)
+# print( 'mscoco2017/train2017/%012d.jpg%011d' %(id ,id2))
 
 name_box_id = defaultdict(list)
 id_name = dict()
@@ -8,10 +12,10 @@ f = open(
     encoding='utf-8')
 data = json.load(f)
 
-annotations = data['annotations']
+annotations = data['annotations'] #读取json里面的标签.
 for ant in annotations:
     id = ant['image_id']
-    name = 'mscoco2017/train2017/%012d.jpg' % id
+    name = 'mscoco2017/train2017/%012d.jpg' % id #name是图片的地址.
     cat = ant['category_id']
 
     if cat >= 1 and cat <= 11:
@@ -50,3 +54,6 @@ for key in name_box_id.keys():
         f.write(box_info)
     f.write('\n')
 f.close()
+
+
+#把结果都写到train.txt里面.
