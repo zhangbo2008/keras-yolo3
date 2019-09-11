@@ -14,6 +14,11 @@ from keras.regularizers import l2
 
 from yolo3.utils import compose
 
+'''
+重新读yolo3
+2019-09-11,11点04
+
+'''
 
 @wraps(Conv2D)
 def DarknetConv2D(*args, **kwargs):
@@ -54,6 +59,8 @@ def darknet_body(x):
     x = resblock_body(x, 1024, 4)
     return x
 
+
+#下面一个函数做一个大的conv算子
 def make_last_layers(x, num_filters, out_filters):
     '''6 Conv2D_BN_Leaky layers followed by a Conv2D_linear layer'''
     x = compose(
@@ -83,6 +90,9 @@ def yolo_body(inputs, num_anchors, num_classes):
             DarknetConv2D_BN_Leaky(128, (1,1)),
             UpSampling2D(2))(x)
     x = Concatenate()([x,darknet.layers[92].output])
+
+    #结果是一个box对应分类书+5 这么多的结果.一个box对应一个anchors.
+    #所以输出维度是num_anchors*(num_classes+5)
     x, y3 = make_last_layers(x, 128, num_anchors*(num_classes+5))
 
     return Model(inputs, [y1,y2,y3])
@@ -368,9 +378,12 @@ def yolo_loss(args, anchors, num_classes, ignore_thresh=.5, print_loss=False):
     ----------
     yolo_outputs: list of tensor, the output of yolo_body or tiny_yolo_body
     y_true: list of array, the output of preprocess_true_boxes
-    anchors: array, shape=(N, 2), wh
+    anchors: array, shape=(N, 2), wh  #应该表示的是box 对应于中心点的宽和搞.
     num_classes: integer
     ignore_thresh: float, the iou threshold whether to ignore object confidence loss
+
+
+    args:传入的一个数组.
 
     Returns
     -------
