@@ -257,10 +257,17 @@ def yolo_eval(yolo_outputs,
 
     return boxes_, scores_, classes_  #就是一个收集函数.
 
-# print(np.array([228,228])//{0:32, 1:16, 2:8}[1])
-true_boxes=np.zeros((10,20,5))
-input_shape=np.array((32,32))
-anchors=np.zeros((9,2))#  第一个参数只能取9 ,表示一个cell对应9个anchors 也就是box,所以最后是13*13*9=1521
+# print(np.array([228,228])//{0:32, 1:16, 2:8}[1])#用random来做测试 方便.
+true_boxes=np.random.random((20,10,5))
+
+input_shape=np.array((416,416))
+
+anchors=np.random.random((9,2))
+#  第一个参数只能取9 ,表示一个cell对应9个anchors 也就是box,所以最后是13*13*9=1521
+#具体里面的参数就是跟faster-rcnn里面的意义一样,表示每一个cell中心对应anchors的box 宽和搞.
+#从系数看也就是跟faster-rcnn里面那种各种面积各种比例的box参数而已.
+
+
 num_classes=20
 def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
     '''Preprocess true boxes to training input format
@@ -281,7 +288,7 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
     assert (true_boxes[..., 4]<num_classes).all(), 'class id must be less than num_classes'
     num_layers = len(anchors)//3 # default setting
     anchor_mask = [[6,7,8], [3,4,5], [0,1,2]] if num_layers==3 else [[3,4,5], [1,2,3]]
-
+# yolo 用 3个anchor_mask tiny _yolo 用2个的.
     true_boxes = np.array(true_boxes, dtype='float32')
     input_shape = np.array(input_shape, dtype='int32')
     #之前的true_boxes 4个坐标(xmin,ymin,xmax,ymax)是关于图片左上角的,通过计算改成xywh
@@ -293,13 +300,13 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
     m = true_boxes.shape[0]       #读取下面行的字典作为处罚的出书.  下面行只能让num_layers=3!!!!!!!??
     grid_shapes = [input_shape//{0:32, 1:16, 2:8}[l] for l in range(num_layers)] #缩小.
     y_true = [np.zeros((m,grid_shapes[l][0],grid_shapes[l][1],len(anchor_mask[l]),5+num_classes),
-        dtype='float32') for l in range(num_layers)]
-
+        dtype='float32') for l in range(num_layers)]#因为fpn所以grid_shapes现在是3种box,检测大中小,以前只有大,现在分辨率高了.对于检测小的物品效果更好了.  对于grid_shape=[ (10, 13, 13, 3, 25), (10, 26, 26, 3, 25), (10, 52, 52, 3, 25)]
+#grid ,shape表示方框的大小,还是跟以前一样,debug时候写注释不要破坏行号.找空白地方写.
     # Expand dim to apply broadcasting.
-    anchors = np.expand_dims(anchors, 0)
+    anchors = np.expand_dims(anchors, 0)   #anchors (1,9,2)
     anchor_maxes = anchors / 2.
     anchor_mins = -anchor_maxes
-    valid_mask = boxes_wh[..., 0]>0
+    valid_mask = boxes_wh[..., 0]>0  # 10,20,2
 
     for b in range(m):
         # Discard zero rows.
@@ -330,11 +337,11 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
                     c = true_boxes[b,t, 4].astype('int32')
                     y_true[l][b, j, i, k, 0:4] = true_boxes[b,t, 0:4]
                     y_true[l][b, j, i, k, 4] = 1
-                    y_true[l][b, j, i, k, 5+c] = 1
+                    y_true[l][b, j, i, k, 5+c] = 1  #是第几类物体赋值给1.
 
     return y_true
 
-preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes)
+
 
 
 
