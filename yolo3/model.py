@@ -258,6 +258,10 @@ def yolo_eval(yolo_outputs,
     return boxes_, scores_, classes_  #就是一个收集函数.
 
 # print(np.array([228,228])//{0:32, 1:16, 2:8}[1])
+true_boxes=np.zeros((10,20,5))
+input_shape=np.array((32,32))
+anchors=np.zeros((9,2))#  第一个参数只能取9 ,表示一个cell对应9个anchors 也就是box,所以最后是13*13*9=1521
+num_classes=20
 def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
     '''Preprocess true boxes to training input format
 
@@ -280,12 +284,13 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
 
     true_boxes = np.array(true_boxes, dtype='float32')
     input_shape = np.array(input_shape, dtype='int32')
+    #之前的true_boxes 4个坐标(xmin,ymin,xmax,ymax)是关于图片左上角的,通过计算改成xywh
     boxes_xy = (true_boxes[..., 0:2] + true_boxes[..., 2:4]) // 2
     boxes_wh = true_boxes[..., 2:4] - true_boxes[..., 0:2]
     true_boxes[..., 0:2] = boxes_xy/input_shape[::-1]
     true_boxes[..., 2:4] = boxes_wh/input_shape[::-1]
 
-    m = true_boxes.shape[0]
+    m = true_boxes.shape[0]       #读取下面行的字典作为处罚的出书.  下面行只能让num_layers=3!!!!!!!??
     grid_shapes = [input_shape//{0:32, 1:16, 2:8}[l] for l in range(num_layers)] #缩小.
     y_true = [np.zeros((m,grid_shapes[l][0],grid_shapes[l][1],len(anchor_mask[l]),5+num_classes),
         dtype='float32') for l in range(num_layers)]
@@ -328,6 +333,22 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
                     y_true[l][b, j, i, k, 5+c] = 1
 
     return y_true
+
+preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def box_iou(b1, b2):

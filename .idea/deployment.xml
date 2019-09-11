@@ -1,18 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="Copy of project-level server '12'">
+  <component name="PublishConfigData" autoUpload="Always" serverName="root@116.196.87.166:22">
     <serverData>
-      <paths name="Copy of project-level server '12'">
+      <paths name="root@116.196.87.166:22">
         <serverdata>
           <mappings>
-            <mapping deploy="/data/test20" local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="xianshang">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
+            <mapping deploy="/data/yolo3" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
