@@ -12,9 +12,18 @@ from keras.callbacks import TensorBoard, ModelCheckpoint, ReduceLROnPlateau, Ear
 from yolo3.model import preprocess_true_boxes, yolo_body, tiny_yolo_body, yolo_loss
 from yolo3.utils import get_random_data
 
+'''
+先运行脚本voc_annotation.py
+生成需要的txt
+然后再运行这个脚本.就可以跑了!
+这次可以完整的训练了.
 
+#看出右边这个bottlenet是效果更好的强化班.用的coco数据集. 
+#目前先不研究这个代码了.先学好train里面的代码!
+
+'''
 def _main():
-    annotation_path = 'train.txt'
+    annotation_path = '2007_train.txt'
     log_dir = 'logs/000/'
     classes_path = 'model_data/coco_classes.txt'
     anchors_path = 'model_data/yolo_anchors.txt'
@@ -25,7 +34,7 @@ def _main():
     input_shape = (416,416) # multiple of 32, hw
 
     model, bottleneck_model, last_layer_model = create_model(input_shape, anchors, num_classes,
-            freeze_body=2, weights_path='model_data/yolo_weights.h5') # make sure you know what you freeze
+            freeze_body=2, weights_path='model_data/yolo.h5') # make sure you know what you freeze
 
     logging = TensorBoard(log_dir=log_dir)
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',

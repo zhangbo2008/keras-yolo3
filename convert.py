@@ -56,23 +56,33 @@ def unique_config_sections(config_file):
 
 # %%
 def _main(args):
+    #添加home变量的前缀
     config_path = os.path.expanduser(args.config_path)
     weights_path = os.path.expanduser(args.weights_path)
+    #判断合法性
     assert config_path.endswith('.cfg'), '{} is not a .cfg file'.format(
         config_path)
     assert weights_path.endswith(
         '.weights'), '{} is not a .weights file'.format(weights_path)
+
+
+
 
     output_path = os.path.expanduser(args.output_path)
     assert output_path.endswith(
         '.h5'), 'output path {} is not a .h5 file'.format(output_path)
     output_root = os.path.splitext(output_path)[0]
 
+
+
+
+
     # Load weights and config.
     print('Loading weights.')
     weights_file = open(weights_path, 'rb')
     major, minor, revision = np.ndarray(
         shape=(3, ), dtype='int32', buffer=weights_file.read(12))
+    #读取前12个字符.
     if (major*10+minor)>=2 and major<1000 and minor<1000:
         seen = np.ndarray(shape=(1,), dtype='int64', buffer=weights_file.read(8))
     else:

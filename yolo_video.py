@@ -26,7 +26,8 @@ if __name__ == '__main__':
     '''
     parser.add_argument(
         '--model', type=str,
-        help='path to model weight file, default ' + YOLO.get_defaults("model_path")
+        help='path to model weight file, default ' + YOLO.get_defaults("model_path"),
+        default= YOLO.get_defaults("model_path")
     )
 
     parser.add_argument(
@@ -45,7 +46,7 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--image', default=False, action="store_true",
+        '--image', default=True, action="store_true",
         help='Image detection mode, will ignore all positional arguments'
     )
     '''

@@ -17,7 +17,22 @@ https://pjreddie.com/darknet/yolo/
 
 https://blog.csdn.net/lwplwf/article/details/82895409
 
-pycharm版本2019.1
+pycharm版本2019.2
+
+1.运行
+wget https://pjreddie.com/media/files/yolov3.weights
+python convert.py yolov3.cfg yolov3.weights model_data/yolo.h5
+python yolo_video.py [OPTIONS...] --image, for image detection mode, OR
+2.训练.
+
+voc_annotation.py
+然后train.py
+
+
+
+
+
+
 
 
 

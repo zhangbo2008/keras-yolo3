@@ -4,6 +4,7 @@ import numpy as np
 class YOLO_Kmeans:
 
     def __init__(self, cluster_number, filename):
+        #为了效果这里面用cluster_number=9
         self.cluster_number = cluster_number
         self.filename = "2012_train.txt"
 

@@ -14,7 +14,7 @@ from yolo3.utils import get_random_data
 
 
 def _main():
-    annotation_path = 'train.txt'
+    annotation_path = '2007_train.txt'
     log_dir = 'logs/000/'
     classes_path = 'model_data/voc_classes.txt'
     anchors_path = 'model_data/yolo_anchors.txt'
@@ -35,6 +35,7 @@ def _main():
     logging = TensorBoard(log_dir=log_dir)
     checkpoint = ModelCheckpoint(log_dir + 'ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',
         monitor='val_loss', save_weights_only=True, save_best_only=True, period=3)
+    # lr衰减
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=3, verbose=1)
     early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=10, verbose=1)
 
@@ -43,12 +44,16 @@ def _main():
         lines = f.readlines()
     np.random.seed(10101)
     np.random.shuffle(lines)
-    np.random.seed(None)
-    num_val = int(len(lines)*val_split)
+    np.random.seed(None)#重头traindebug一遍
+    num_val = int(len(lines)*val_split)  # 切割训练集和val 集
     num_train = len(lines) - num_val
 
     # Train with frozen layers first, to get a stable loss.
     # Adjust num epochs to your dataset. This step is enough to obtain a not bad model.
+
+    '''
+    训练的策略
+    '''
     if True:
         model.compile(optimizer=Adam(lr=1e-3), loss={
             # use custom yolo_loss Lambda layer.
@@ -97,7 +102,7 @@ def get_classes(classes_path):
 def get_anchors(anchors_path):
     '''loads the anchors from a file'''
     with open(anchors_path) as f:
-        anchors = f.readline()
+        anchors = f.readline()#只读一行
     anchors = [float(x) for x in anchors.split(',')]
     return np.array(anchors).reshape(-1, 2)
 
@@ -123,6 +128,7 @@ def create_model(input_shape, anchors, num_classes, load_pretrained=True, freeze
             # Freeze darknet53 body or freeze all but 3 output layers.
             num = (185, len(model_body.layers)-3)[freeze_body-1]
             for i in range(num): model_body.layers[i].trainable = False
+            #模型参数全锁定除了最后基层
             print('Freeze the first {} layers of total {} layers.'.format(num, len(model_body.layers)))
 
     model_loss = Lambda(yolo_loss, output_shape=(1,), name='yolo_loss',
@@ -177,7 +183,7 @@ def data_generator(annotation_lines, batch_size, input_shape, anchors, num_class
             box_data.append(box)
             i = (i+1) % n
         image_data = np.array(image_data)
-        box_data = np.array(box_data)
+        box_data = np.array(box_data)  #下面一行是关键!!!!!!!!
         y_true = preprocess_true_boxes(box_data, input_shape, anchors, num_classes)
         yield [image_data, *y_true], np.zeros(batch_size)
 

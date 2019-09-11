@@ -1,7 +1,26 @@
 import xml.etree.ElementTree as ET
 from os import getcwd
+'''
+这个算法,需要把Voc的数据进行标注,就是这个脚本.
+跑完之后的东西才能进行train.py 的运行
 
-sets=[('2007', 'train'), ('2007', 'val'), ('2007', 'test')]
+
+
+下面记录这个标注脚本的使用情况:
+
+
+数据集使用的是:
+
+wget https://pjreddie.com/media/files/VOCtrainval_06-Nov-2007.tar
+wget https://pjreddie.com/media/files/VOCtest_06-Nov-2007.tar
+
+
+
+
+
+'''
+# sets=[('2007', 'train'), ('2007', 'val'), ('2007', 'test')]
+sets=[('2007', 'train'), ('2007', 'val')]
 
 classes = ["aeroplane", "bicycle", "bird", "boat", "bottle", "bus", "car", "cat", "chair", "cow", "diningtable", "dog", "horse", "motorbike", "person", "pottedplant", "sheep", "sofa", "train", "tvmonitor"]
 
@@ -24,7 +43,8 @@ def convert_annotation(year, image_id, list_file):
 wd = getcwd()
 
 for year, image_set in sets:
-    image_ids = open('VOCdevkit/VOC%s/ImageSets/Main/%s.txt'%(year, image_set)).read().strip().split()
+    print('VOCdevkit/VOC%s/ImageSets/Main/%s.txt'%(year, image_set))
+    image_ids = open('VOCdevkit/VOC%s/ImageSets/Layout/%s.txt'%(year, image_set)).read().strip().split()
     list_file = open('%s_%s.txt'%(year, image_set), 'w')
     for image_id in image_ids:
         list_file.write('%s/VOCdevkit/VOC%s/JPEGImages/%s.jpg'%(wd, year, image_id))

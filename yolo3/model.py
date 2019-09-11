@@ -14,6 +14,11 @@ from keras.regularizers import l2
 
 from yolo3.utils import compose
 
+'''
+重新读yolo3
+2019-09-11,11点04
+
+'''
 
 @wraps(Conv2D)
 def DarknetConv2D(*args, **kwargs):
@@ -54,6 +59,8 @@ def darknet_body(x):
     x = resblock_body(x, 1024, 4)
     return x
 
+
+#下面一个函数做一个大的conv算子
 def make_last_layers(x, num_filters, out_filters):
     '''6 Conv2D_BN_Leaky layers followed by a Conv2D_linear layer'''
     x = compose(
@@ -83,6 +90,9 @@ def yolo_body(inputs, num_anchors, num_classes):
             DarknetConv2D_BN_Leaky(128, (1,1)),
             UpSampling2D(2))(x)
     x = Concatenate()([x,darknet.layers[92].output])
+
+    #结果是一个box对应分类书+5 这么多的结果.一个box对应一个anchors.
+    #所以输出维度是num_anchors*(num_classes+5)
     x, y3 = make_last_layers(x, 128, num_anchors*(num_classes+5))
 
     return Model(inputs, [y1,y2,y3])
@@ -193,11 +203,14 @@ def yolo_boxes_and_scores(feats, anchors, num_classes, input_shape, image_shape)
     box_xy, box_wh, box_confidence, box_class_probs = yolo_head(feats,
         anchors, num_classes, input_shape)
     boxes = yolo_correct_boxes(box_xy, box_wh, input_shape, image_shape)
-    boxes = K.reshape(boxes, [-1, 4])
+    boxes = K.reshape(boxes, [-1, 4]) #box拍平.
     box_scores = box_confidence * box_class_probs
     box_scores = K.reshape(box_scores, [-1, num_classes])
     return boxes, box_scores
 
+'''
+这个文件里面好多loss函数,看算法的核心就是看loss函数!!!!
+'''
 
 def yolo_eval(yolo_outputs,
               anchors,
@@ -212,11 +225,12 @@ def yolo_eval(yolo_outputs,
     input_shape = K.shape(yolo_outputs[0])[1:3] * 32
     boxes = []
     box_scores = []
-    for l in range(num_layers):
+    for l in range(num_layers):#读取部分layer层的结果.
         _boxes, _box_scores = yolo_boxes_and_scores(yolo_outputs[l],
             anchors[anchor_mask[l]], num_classes, input_shape, image_shape)
         boxes.append(_boxes)
         box_scores.append(_box_scores)
+        #收集结果.
     boxes = K.concatenate(boxes, axis=0)
     box_scores = K.concatenate(box_scores, axis=0)
 
@@ -241,15 +255,26 @@ def yolo_eval(yolo_outputs,
     scores_ = K.concatenate(scores_, axis=0)
     classes_ = K.concatenate(classes_, axis=0)
 
-    return boxes_, scores_, classes_
+    return boxes_, scores_, classes_  #就是一个收集函数.
+
+# print(np.array([228,228])//{0:32, 1:16, 2:8}[1])#用random来做测试 方便.
+true_boxes=np.random.random((20,10,5))
+
+input_shape=np.array((416,416))
+
+anchors=np.random.random((9,2))
+#  第一个参数只能取9 ,表示一个cell对应9个anchors 也就是box,所以最后是13*13*9=1521
+#具体里面的参数就是跟faster-rcnn里面的意义一样,表示每一个cell中心对应anchors的box 宽和搞.
+#从系数看也就是跟faster-rcnn里面那种各种面积各种比例的box参数而已.
 
 
+num_classes=20
 def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
     '''Preprocess true boxes to training input format
 
     Parameters
     ----------
-    true_boxes: array, shape=(m, T, 5)
+    true_boxes: array, shape=(batch_size, max_boxes_index(defuat :20), 5)
         Absolute x_min, y_min, x_max, y_max, class_id relative to input_shape.
     input_shape: array-like, hw, multiples of 32
     anchors: array, shape=(N, 2), wh
@@ -263,34 +288,35 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
     assert (true_boxes[..., 4]<num_classes).all(), 'class id must be less than num_classes'
     num_layers = len(anchors)//3 # default setting
     anchor_mask = [[6,7,8], [3,4,5], [0,1,2]] if num_layers==3 else [[3,4,5], [1,2,3]]
-
+# yolo 用 3个anchor_mask tiny _yolo 用2个的.
     true_boxes = np.array(true_boxes, dtype='float32')
     input_shape = np.array(input_shape, dtype='int32')
+    #之前的true_boxes 4个坐标(xmin,ymin,xmax,ymax)是关于图片左上角的,通过计算改成xywh
     boxes_xy = (true_boxes[..., 0:2] + true_boxes[..., 2:4]) // 2
     boxes_wh = true_boxes[..., 2:4] - true_boxes[..., 0:2]
     true_boxes[..., 0:2] = boxes_xy/input_shape[::-1]
     true_boxes[..., 2:4] = boxes_wh/input_shape[::-1]
 
-    m = true_boxes.shape[0]
-    grid_shapes = [input_shape//{0:32, 1:16, 2:8}[l] for l in range(num_layers)]
+    m = true_boxes.shape[0]       #读取下面行的字典作为处罚的出书.  下面行只能让num_layers=3!!!!!!!??
+    grid_shapes = [input_shape//{0:32, 1:16, 2:8}[l] for l in range(num_layers)] #缩小.
     y_true = [np.zeros((m,grid_shapes[l][0],grid_shapes[l][1],len(anchor_mask[l]),5+num_classes),
-        dtype='float32') for l in range(num_layers)]
-
+        dtype='float32') for l in range(num_layers)]#因为fpn所以grid_shapes现在是3种box,检测大中小,以前只有大,现在分辨率高了.对于检测小的物品效果更好了.  对于grid_shape=[ (10, 13, 13, 3, 25), (10, 26, 26, 3, 25), (10, 52, 52, 3, 25)]
+#grid ,shape表示方框的大小,还是跟以前一样,debug时候写注释不要破坏行号.找空白地方写.  (3,  32,13,13,3 ,25)          3: ftn  32: batchsize 13,13 w h  3:anchor mask 25:class+5
     # Expand dim to apply broadcasting.
-    anchors = np.expand_dims(anchors, 0)
+    anchors = np.expand_dims(anchors, 0)   #anchors (1,9,2)
     anchor_maxes = anchors / 2.
     anchor_mins = -anchor_maxes
-    valid_mask = boxes_wh[..., 0]>0
+    valid_mask = boxes_wh[..., 0]>0  # 10,20,2
 
     for b in range(m):
         # Discard zero rows.
-        wh = boxes_wh[b, valid_mask[b]]
+        wh = boxes_wh[b, valid_mask[b]] #wh 表示当前batch 对应的那些合法箱子. 比如(4,2)
         if len(wh)==0: continue
         # Expand dim to apply broadcasting.
-        wh = np.expand_dims(wh, -2)
+        wh = np.expand_dims(wh, -2)         #(4,1,2)
         box_maxes = wh / 2.
         box_mins = -box_maxes
-
+        #wh 是真实box的长款. #注意np里面不同维度的向量可以计算max,min.这里面的结果是 拿标准box 跟9个anchor比较.算iou
         intersect_mins = np.maximum(box_mins, anchor_mins)
         intersect_maxes = np.minimum(box_maxes, anchor_maxes)
         intersect_wh = np.maximum(intersect_maxes - intersect_mins, 0.)
@@ -300,20 +326,36 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
         iou = intersect_area / (box_area + anchor_area - intersect_area)
 
         # Find best anchor for each true box
-        best_anchor = np.argmax(iou, axis=-1)
+        best_anchor = np.argmax(iou, axis=-1)          #iou:(4,9)  #best_anchor(7,7,8,8)表示 目标箱子0号与7号anchor最匹配, 1号箱子跟7号anchor 2号跟8号 3号跟8号
 
-        for t, n in enumerate(best_anchor):
+        for t, n in enumerate(best_anchor):#t 是box标号  n:anchor标号
             for l in range(num_layers):
-                if n in anchor_mask[l]:
+                if n in anchor_mask[l]:#这里面anchor mask 是0到8.为了如果网络是tiny时候过滤掉一些anchor
                     i = np.floor(true_boxes[b,t,0]*grid_shapes[l][1]).astype('int32')
                     j = np.floor(true_boxes[b,t,1]*grid_shapes[l][0]).astype('int32')
                     k = anchor_mask[l].index(n)
                     c = true_boxes[b,t, 4].astype('int32')
                     y_true[l][b, j, i, k, 0:4] = true_boxes[b,t, 0:4]
                     y_true[l][b, j, i, k, 4] = 1
-                    y_true[l][b, j, i, k, 5+c] = 1
+                    y_true[l][b, j, i, k, 5+c] = 1  #是第几类物体赋值给1.
 
-    return y_true
+    return y_true# 说明y_true里面的意义,
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def box_iou(b1, b2):
@@ -356,7 +398,7 @@ def box_iou(b1, b2):
 
     return iou
 
-
+#loss 函数的最后表达!!!!!!!!!!!!!!!
 def yolo_loss(args, anchors, num_classes, ignore_thresh=.5, print_loss=False):
     '''Return yolo_loss tensor
 
@@ -364,9 +406,12 @@ def yolo_loss(args, anchors, num_classes, ignore_thresh=.5, print_loss=False):
     ----------
     yolo_outputs: list of tensor, the output of yolo_body or tiny_yolo_body
     y_true: list of array, the output of preprocess_true_boxes
-    anchors: array, shape=(N, 2), wh
+    anchors: array, shape=(N, 2), wh  #应该表示的是box 对应于中心点的宽和搞.
     num_classes: integer
     ignore_thresh: float, the iou threshold whether to ignore object confidence loss
+
+
+    args:传入的一个数组.
 
     Returns
     -------
