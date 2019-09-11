@@ -14,7 +14,7 @@ from yolo3.utils import get_random_data
 
 
 def _main():
-    annotation_path = 'train.txt'
+    annotation_path = '2007_train.txt'
     log_dir = 'logs/000/'
     classes_path = 'model_data/voc_classes.txt'
     anchors_path = 'model_data/yolo_anchors.txt'
@@ -44,8 +44,8 @@ def _main():
         lines = f.readlines()
     np.random.seed(10101)
     np.random.shuffle(lines)
-    np.random.seed(None)
-    num_val = int(len(lines)*val_split)
+    np.random.seed(None)#重头traindebug一遍
+    num_val = int(len(lines)*val_split)  # 切割训练集和val 集
     num_train = len(lines) - num_val
 
     # Train with frozen layers first, to get a stable loss.
@@ -183,7 +183,7 @@ def data_generator(annotation_lines, batch_size, input_shape, anchors, num_class
             box_data.append(box)
             i = (i+1) % n
         image_data = np.array(image_data)
-        box_data = np.array(box_data)
+        box_data = np.array(box_data)  #下面一行是关键!!!!!!!!
         y_true = preprocess_true_boxes(box_data, input_shape, anchors, num_classes)
         yield [image_data, *y_true], np.zeros(batch_size)
 

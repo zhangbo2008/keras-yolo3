@@ -16,8 +16,10 @@ from yolo3.utils import get_random_data
 先运行脚本voc_annotation.py
 生成需要的txt
 然后再运行这个脚本.就可以跑了!
+这次可以完整的训练了.
 
-
+#看出右边这个bottlenet是效果更好的强化班.用的coco数据集. 
+#目前先不研究这个代码了.先学好train里面的代码!
 
 '''
 def _main():
