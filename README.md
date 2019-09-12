@@ -29,7 +29,11 @@ voc_annotation.py
 然后train.py
 
 
-
+3.远程连接的bug处理:
+Global request [global req for tcpip-forward] failed
+这个表示端口被占用.
+kill 63342端口的程序即可.
+貌似是只有一个pycharm可以远程连接服务器跑代码!
 
 
 
