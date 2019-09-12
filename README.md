@@ -35,9 +35,9 @@ Global request [global req for tcpip-forward] failed
 kill 63342端口的程序即可.
 貌似是只有一个pycharm可以远程连接服务器跑代码!
 
+4.相关论文和理解注释放到了
 
-
-
+https://github.com/zhangbo2008/saveBook
 
 
 

@@ -142,19 +142,32 @@ def yolo_head(feats, anchors, num_classes, input_shape, calc_loss=False):
         [1, grid_shape[1], 1, 1])
     grid_x = K.tile(K.reshape(K.arange(0, stop=grid_shape[1]), [1, -1, 1, 1]),
         [grid_shape[0], 1, 1, 1])
-    grid = K.concatenate([grid_x, grid_y])
-    grid = K.cast(grid, K.dtype(feats))
+    grid = K.concatenate([grid_x, grid_y]) #concatenate 默认-1轴
+    grid = K.cast(grid, K.dtype(feats)) #grid 前2维 是 [[0--13],....[0----13]]
 
     feats = K.reshape(
         feats, [-1, grid_shape[0], grid_shape[1], num_anchors, num_classes + 5])
-
-    # Adjust preditions to each spatial grid point and anchor size.
+    #使用sigmoid 值域0,1 所以加完grid之后表示box_xy中心在第几个grid行列中,只不过这个行列是一个float,再除以总的grid总数
+    #就得到了feats对应的坐标的行列坐标占图片长,宽的比例是多少!!!!!!!!!!!!
+    #还是原来的思路,神经网络的输出不用管他表示什么含义,他表示的含义都是逆向传导之后自己学到的.
+    #反过来看,feats[..., :2]表示的就是跟当前grid的偏移量被作用sigmoid反函数.这个是容易学到的东西.
+    #因为这个值有一个基准,是当前grid,所以模型稳定,收敛速度快!不是像以前一样全图片搜索.而是在grid中心附近搜索框.
+    #并且不超过这个grid. 感觉这里就是yolov2最难理解的地方.全靠bp思想理解.
+    # Adjust preditions to each spatial grid point and anchor size.//box_xy: shape(2,)/(13,13) #下面/ 是对-1维除的
     box_xy = (K.sigmoid(feats[..., :2]) + grid) / K.cast(grid_shape[::-1], K.dtype(feats))#这两个很神秘!
     box_wh = K.exp(feats[..., 2:4]) * anchors_tensor / K.cast(input_shape[::-1], K.dtype(feats))
+    #下面学习box_wh.     K.exp(feats[..., 2:4]) * anchors_tensor 表示学习到的框大小.
+    #这里面用exp来让学到的东西变化不大. 缩小了取值范围,提高收敛速度.感觉本质就是提高学习率了.
+
+
+
+
+
+
     box_confidence = K.sigmoid(feats[..., 4:5])       #这2个归一化,sigmoid好理解.
     box_class_probs = K.sigmoid(feats[..., 5:])
 
-    if calc_loss == True:
+    if calc_loss == True:#看这个grid:表示网格
         return grid, feats, box_xy, box_wh
     return box_xy, box_wh, box_confidence, box_class_probs
 
@@ -421,13 +434,13 @@ def yolo_loss(args, anchors, num_classes, ignore_thresh=.5, print_loss=False):
 
     '''
     num_layers = len(anchors)//3 # default setting
-    yolo_outputs = args[:num_layers]
-    y_true = args[num_layers:]#这里面就是前3个切分,后3个切一组.
+    yolo_outputs = args[:num_layers] #这个是yhat
+    y_true = args[num_layers:]#这里面就是前3个切分,后3个切一组.  这个是groud_true
     anchor_mask = [[6,7,8], [3,4,5], [0,1,2]] if num_layers==3 else [[3,4,5], [1,2,3]]
     input_shape = K.cast(K.shape(yolo_outputs[0])[1:3] * 32, K.dtype(y_true[0]))
     grid_shapes = [K.cast(K.shape(yolo_outputs[l])[1:3], K.dtype(y_true[0])) for l in range(num_layers)]
     loss = 0
-
+    #最后看这个loss函数的做法.
     m = K.shape(yolo_outputs[0])[0] # batch size, tensor
     mf = K.cast(m, K.dtype(yolo_outputs[0]))
 
@@ -440,10 +453,10 @@ def yolo_loss(args, anchors, num_classes, ignore_thresh=.5, print_loss=False):
         pred_box = K.concatenate([pred_xy, pred_wh])
 
         # Darknet raw box to calculate loss.
-        raw_true_xy = y_true[l][..., :2]*grid_shapes[l][::-1] - grid
+        raw_true_xy = y_true[l][..., :2]*grid_shapes[l][::-1] - grid #跟grid偏移量坐标
         raw_true_wh = K.log(y_true[l][..., 2:4] / anchors[anchor_mask[l]] * input_shape[::-1])
-        raw_true_wh = K.switch(object_mask, raw_true_wh, K.zeros_like(raw_true_wh)) # avoid log(0)=-inf
-        box_loss_scale = 2 - y_true[l][...,2:3]*y_true[l][...,3:4]
+        raw_true_wh = K.switch(object_mask, raw_true_wh, K.zeros_like(raw_true_wh)) # avoid log(0)=-inf#没有物体就返回0,否则会触发log(0)的bug.
+        box_loss_scale = 2 - y_true[l][...,2:3]*y_true[l][...,3:4] #loss权重
 
         # Find ignore mask, iterate over each of batch.
         ignore_mask = tf.TensorArray(K.dtype(y_true[0]), size=1, dynamic_size=True)
@@ -458,7 +471,7 @@ def yolo_loss(args, anchors, num_classes, ignore_thresh=.5, print_loss=False):
         ignore_mask = ignore_mask.stack()
         ignore_mask = K.expand_dims(ignore_mask, -1)
 
-        # K.binary_crossentropy is helpful to avoid exp overflow.
+        # K.binary_crossentropy is helpful to avoid exp overflow. #因为wh里面有log.所以xy里面也用一个带log的crossentropy
         xy_loss = object_mask * box_loss_scale * K.binary_crossentropy(raw_true_xy, raw_pred[...,0:2], from_logits=True)
         wh_loss = object_mask * box_loss_scale * 0.5 * K.square(raw_true_wh-raw_pred[...,2:4])
         confidence_loss = object_mask * K.binary_crossentropy(object_mask, raw_pred[...,4:5], from_logits=True)+ \
