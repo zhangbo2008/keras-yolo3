@@ -131,7 +131,7 @@ def tiny_yolo_body(inputs, num_anchors, num_classes):
 
 
 def yolo_head(feats, anchors, num_classes, input_shape, calc_loss=False):
-    """Convert final layer features to bounding box parameters."""
+    """Convert final layer features to bounding box parameters.""" #feats:网络输出的节骨.
     num_anchors = len(anchors)
 
     #因为 anchors是高维向量,所以len 不是里面数字的数量.所以下面的reshape是正确的.
@@ -149,9 +149,9 @@ def yolo_head(feats, anchors, num_classes, input_shape, calc_loss=False):
         feats, [-1, grid_shape[0], grid_shape[1], num_anchors, num_classes + 5])
 
     # Adjust preditions to each spatial grid point and anchor size.
-    box_xy = (K.sigmoid(feats[..., :2]) + grid) / K.cast(grid_shape[::-1], K.dtype(feats))
+    box_xy = (K.sigmoid(feats[..., :2]) + grid) / K.cast(grid_shape[::-1], K.dtype(feats))#这两个很神秘!
     box_wh = K.exp(feats[..., 2:4]) * anchors_tensor / K.cast(input_shape[::-1], K.dtype(feats))
-    box_confidence = K.sigmoid(feats[..., 4:5])
+    box_confidence = K.sigmoid(feats[..., 4:5])       #这2个归一化,sigmoid好理解.
     box_class_probs = K.sigmoid(feats[..., 5:])
 
     if calc_loss == True:
@@ -339,7 +339,9 @@ def preprocess_true_boxes(true_boxes, input_shape, anchors, num_classes):
                     y_true[l][b, j, i, k, 4] = 1
                     y_true[l][b, j, i, k, 5+c] = 1  #是第几类物体赋值给1.
 
-    return y_true# 说明y_true里面的意义,
+    return y_true# 说明y_true里面的意义, 第一个坐标表示分辨率大小坐标.第二位batch,第三个,第四个
+#表示 当前匹配的anchor 是 行列分别是第几个cell  也就是在比如(13,13)这个网络里面的第(3,4)个cell,
+#k 是anchor mask对应的index, 最后一维是25维数据用于回归和分类.
 
 
 
@@ -420,11 +422,12 @@ def yolo_loss(args, anchors, num_classes, ignore_thresh=.5, print_loss=False):
     '''
     num_layers = len(anchors)//3 # default setting
     yolo_outputs = args[:num_layers]
-    y_true = args[num_layers:]
+    y_true = args[num_layers:]#这里面就是前3个切分,后3个切一组.
     anchor_mask = [[6,7,8], [3,4,5], [0,1,2]] if num_layers==3 else [[3,4,5], [1,2,3]]
     input_shape = K.cast(K.shape(yolo_outputs[0])[1:3] * 32, K.dtype(y_true[0]))
     grid_shapes = [K.cast(K.shape(yolo_outputs[l])[1:3], K.dtype(y_true[0])) for l in range(num_layers)]
     loss = 0
+
     m = K.shape(yolo_outputs[0])[0] # batch size, tensor
     mf = K.cast(m, K.dtype(yolo_outputs[0]))
 

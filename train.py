@@ -116,8 +116,8 @@ def create_model(input_shape, anchors, num_classes, load_pretrained=True, freeze
     num_anchors = len(anchors)
 
     y_true = [Input(shape=(h//{0:32, 1:16, 2:8}[l], w//{0:32, 1:16, 2:8}[l], \
-        num_anchors//3, num_classes+5)) for l in range(3)]
-
+        num_anchors//3, num_classes+5)) for l in range(3)]       #y_true   [3 ? 13 13 3 25]
+    #yolo_body 就是网络放一堆就好了.  model_body.output=??? 75
     model_body = yolo_body(image_input, num_anchors//3, num_classes)
     print('Create YOLOv3 model with {} anchors and {} classes.'.format(num_anchors, num_classes))
 
@@ -132,8 +132,8 @@ def create_model(input_shape, anchors, num_classes, load_pretrained=True, freeze
             print('Freeze the first {} layers of total {} layers.'.format(num, len(model_body.layers)))
 
     model_loss = Lambda(yolo_loss, output_shape=(1,), name='yolo_loss',
-        arguments={'anchors': anchors, 'num_classes': num_classes, 'ignore_thresh': 0.5})(
-        [*model_body.output, *y_true])
+        arguments={'anchors': anchors, 'num_classes': num_classes, 'ignore_thresh': 0.5}    )  (
+        [*model_body.output, *y_true]) #最后一个括号是一个数组,传入yolo_loss中.
     model = Model([model_body.input, *y_true], model_loss)
 
     return model
